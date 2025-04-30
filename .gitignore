@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual Environment
+venv/
+.env/
+ENV/
+env/
+Final_Project_Robo
+Final_Project_Robo/  # if your venv is named like this
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# Data and Output Files
+data/
+*.xlsx
+*.parquet
+
+# Logs and Reports
+*.log
+*.out
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+filtered_stocks_2025-04-19.csv
