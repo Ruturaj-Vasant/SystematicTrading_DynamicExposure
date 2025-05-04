@@ -38,12 +38,20 @@ for fast, slow in ma_pairs:
 
     # Performance metrics
     cumulative = (1 + df['Strategy_Return'].fillna(0)).cumprod()
-    total_return = cumulative.iloc[-1] - 1
-    ann_return = (1 + total_return) ** (252 / total_days) - 1
-    ann_vol = df['Strategy_Return'].std() * np.sqrt(252)
-    sharpe = ann_return / ann_vol if ann_vol != 0 else 0
-    max_dd = (cumulative.cummax() - cumulative).max()
-    final_value = round(cumulative.iloc[-1] * 100, 2)  # Final value from $100
+    if cumulative.isna().all() or cumulative.empty:
+        total_return = 0
+        ann_return = 0
+        ann_vol = 0
+        sharpe = 0
+        max_dd = 0
+        final_value = 100
+    else:
+        total_return = cumulative.iloc[-1] - 1
+        ann_return = (1 + total_return) ** (252 / total_days) - 1
+        ann_vol = df['Strategy_Return'].std() * np.sqrt(252)
+        sharpe = ann_return / ann_vol if ann_vol != 0 else 0
+        max_dd = (cumulative.cummax() - cumulative).max()
+        final_value = round(cumulative.iloc[-1] * 100, 2)  # Final value from $100
 
     results.append({
         'MA_Fast': fast,

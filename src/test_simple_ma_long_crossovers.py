@@ -2,6 +2,17 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import combinations
+import yfinance as yf
+import os
+
+# Auto-download SPY data with High, Low, Close if not already present
+if not os.path.exists("data/spy_vix_data.csv"):
+    print("Downloading SPY data...")
+    spy = yf.download("SPY", start="2018-01-01", end="2024-12-31")
+    spy = spy[['High', 'Low', 'Close']]
+    spy.rename(columns={'Close': 'SPY_Close'}, inplace=True)
+    spy.to_csv("data/spy_vix_data.csv")
+    print("Saved to data/spy_vix_data.csv")
 
 # --- Load SPY price data
 df = pd.read_csv("data/spy_vix_data.csv", index_col=0, parse_dates=True)
