@@ -1,30 +1,32 @@
 # 📌 model_training.py
 
 import pandas as pd
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
+import joblib
+import os
 
 def load_data():
-    df = pd.read_csv('data/spy_vix_features.csv', index_col=0, parse_dates=True)
-    return df
+    return pd.read_csv('data/spy_vix_features.csv', index_col=0, parse_dates=True)
 
 def prepare_features(df):
-    # Features we'll use
-    feature_cols = ['RSI', 'MACD', 'Realized_Volatility', 'VIX_Close', 'SPY_Close']
+    feature_cols = [
+        'RSI', 'MACD', 'Realized_Volatility', 'VIX_Close', 'SPY_Close',
+        'Trend_5_20', 'High_Vol', 'Return_1d', 'Return_5d', 'Return_10d',
+        'Trend_HighVol_Interaction'
+    ]
     
-    # Target: Next-day movement (1 if Return > 0, else 0)
+    # Target: next-day up movement
     df['Return'] = df['SPY_Close'].pct_change().shift(-1)
     df['Target'] = (df['Return'] > 0).astype(int)
     
-    # Drop rows with NaN
     df = df.dropna()
-    
     X = df[feature_cols]
     y = df['Target']
-    
     return X, y, df
 
 def train_model(X_train, y_train):
@@ -33,63 +35,41 @@ def train_model(X_train, y_train):
     return model
 
 def evaluate_model(model, X_test, y_test):
+    print("✅ Default Threshold Evaluation (0.5)")
     y_pred = model.predict(X_test)
-    
-    print("✅ Classification Report")
     print(classification_report(y_test, y_pred))
-
-    cm = confusion_matrix(y_test, y_pred)
-    plt.figure(figsize=(6,5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+    sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, fmt='d', cmap='Blues')
     plt.title('Confusion Matrix')
-    plt.xlabel('Predicted')
-    plt.ylabel('Actual')
-    plt.show()
+    plt.xlabel('Predicted'); plt.ylabel('Actual'); plt.show()
 
-# if __name__ == "__main__":
-#     # --- Workflow
-#     df = load_data()
-#     X, y, df = prepare_features(df)
+    # --- Threshold tuning
+    y_proba = model.predict_proba(X_test)[:, 1]
+    threshold = 0.3
+    y_pred_thresh = (y_proba > threshold).astype(int)
+    print(f"\n✅ Evaluation at Threshold = {threshold}")
+    print(classification_report(y_test, y_pred_thresh))
+    sns.heatmap(confusion_matrix(y_test, y_pred_thresh), annot=True, fmt='d', cmap='Oranges')
+    plt.title(f'Confusion Matrix (Threshold = {threshold})')
+    plt.xlabel('Predicted'); plt.ylabel('Actual'); plt.show()
 
-#     # Chronological split (no shuffling)
-#     split = int(0.8 * len(df))
-#     X_train, X_test = X.iloc[:split], X.iloc[split:]
-#     y_train, y_test = y.iloc[:split], y.iloc[split:]
-
-#     # Train
-#     model = train_model(X_train, y_train)
-
-#     # Evaluate
-#     evaluate_model(model, X_test, y_test)
+    print("\n📊 Threshold Sweep Report")
+    for t in np.arange(0.1, 0.9, 0.1):
+        y_t = (y_proba > t).astype(int)
+        report = classification_report(y_test, y_t, output_dict=True, zero_division=0)
+        print(f"Threshold: {t:.2f} | Precision: {report['1']['precision']:.2f} | "
+              f"Recall: {report['1']['recall']:.2f} | F1: {report['1']['f1-score']:.2f}")
 
 if __name__ == "__main__":
-    # --- Workflow
     df = load_data()
     X, y, df = prepare_features(df)
 
-    # Chronological split (no shuffling)
     split = int(0.8 * len(df))
     X_train, X_test = X.iloc[:split], X.iloc[split:]
     y_train, y_test = y.iloc[:split], y.iloc[split:]
 
-    # Train
     model = train_model(X_train, y_train)
+    evaluate_model(model, X_test, y_test)
 
-    # Soft Predictions
-    y_pred_proba = model.predict_proba(X_test)[:, 1]  # Probability of class 1 (up)
-
-    # Apply threshold
-    threshold = 0.55  # Can try 0.6 or 0.65 later for experimentation 
-    y_pred = (y_pred_proba > threshold).astype(int)
-
-    # Evaluate
-    print("✅ Classification Report (with Threshold)")
-    print(classification_report(y_test, y_pred))
-
-    cm = confusion_matrix(y_test, y_pred)
-    plt.figure(figsize=(6,5))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-    plt.title('Confusion Matrix (Thresholded Predictions)')
-    plt.xlabel('Predicted')
-    plt.ylabel('Actual')
-    plt.show()
+    os.makedirs("models", exist_ok=True)
+    joblib.dump(model, "models/classifier.joblib")
+    print("✅ Model saved to models/classifier.joblib")
