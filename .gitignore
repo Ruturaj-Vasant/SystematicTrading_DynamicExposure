@@ -28,3 +28,7 @@ data/
 .DS_Store
 Thumbs.db
 filtered_stocks_2025-04-19.csv
+
+reports/report.txt
+reports/FinalReport.docx
+reports/~$nalReport.docx
